@@ -1,0 +1,25 @@
+[package]
+name = "typo-fixer-cli"
+version = "0.1.0"
+edition = "2021"
+description = "A CLI tool for fixing typos using fine-tuned Qwen models via candle-coreml"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# CoreML inference via candle-coreml (local development version)
+candle-coreml = { path = "/Users/mazdahewitt/projects/candle-coreml" }
+candle-core = "0.9.1"
+
+# CLI and error handling
+clap = { version = "4.0", features = ["derive"] }
+anyhow = "1.0"
+
+# Serialization and async
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"
