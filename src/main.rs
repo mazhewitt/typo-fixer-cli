@@ -20,7 +20,22 @@ async fn main() -> Result<()> {
     }
     
     // Initialize the typo fixer
-    let mut typo_fixer = TypoFixerLib::new(Some(args.model.clone()), args.verbose).await?;
+    let mut typo_fixer = if let Some(local_path) = &args.local_path {
+        if args.verbose {
+            println!("   Using local model path: {}", local_path);
+        }
+        
+        if let Some(config_path) = &args.config {
+            if args.verbose {
+                println!("   Using configuration file: {}", config_path);
+            }
+            TypoFixerLib::new_with_config_file(config_path, local_path, args.verbose).await?
+        } else {
+            TypoFixerLib::new_from_local(local_path.clone(), args.verbose).await?
+        }
+    } else {
+        TypoFixerLib::new(Some(args.model.clone()), args.verbose).await?
+    };
     
     // Get input text
     let input_text = if args.stdin {

@@ -27,6 +27,20 @@ impl TypoFixerLib {
         
         Ok(Self { typo_fixer })
     }
+
+    /// Create a new TypoFixerLib instance from a local model directory
+    pub async fn new_from_local(model_path: String, verbose: bool) -> Result<Self> {
+        let typo_fixer = TypoFixer::new_from_local(&model_path, verbose).await?;
+        
+        Ok(Self { typo_fixer })
+    }
+
+    /// Create a new TypoFixerLib instance with a configuration file
+    pub async fn new_with_config_file(config_path: &str, model_path: &str, verbose: bool) -> Result<Self> {
+        let typo_fixer = TypoFixer::new_with_config_file(config_path, model_path, verbose).await?;
+        
+        Ok(Self { typo_fixer })
+    }
     
     /// Fix typos in the given text
     pub async fn fix_typos(&mut self, text: &str) -> Result<String> {

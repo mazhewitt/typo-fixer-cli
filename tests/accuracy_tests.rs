@@ -11,7 +11,7 @@ use tokio;
 async fn test_cli_integration_with_working_model() -> Result<()> {
     println!("🧪 Testing CLI integration with working Qwen model");
     
-    let working_model = "anemll/anemll-Qwen-Qwen3-0.6B-ctx512_0.3.4";
+    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
     
     // Test 1: Simple text completion (demonstrating the infrastructure works)
     let output = Command::new("cargo")
@@ -19,7 +19,7 @@ async fn test_cli_integration_with_working_model() -> Result<()> {
             "run", 
             "--", 
             "The quick brown fox",
-            "--model", working_model,
+            "--local-path", working_model_path,
             "--max-tokens", "5",
             "--temperature", "0.0",
             "--output", "json"
@@ -132,6 +132,8 @@ fn test_cli_argument_combinations() {
         input: Some("test input".to_string()),
         stdin: false,
         model: "test-model".to_string(),
+        local_path: None,
+        config: None,
         temperature: 0.0,
         max_tokens: 25,
         output: OutputFormat::Json,
@@ -146,6 +148,8 @@ fn test_cli_argument_combinations() {
         input: Some("line1\nline2\nline3".to_string()),
         stdin: false,
         model: "test-model".to_string(),
+        local_path: None,
+        config: None,
         temperature: 0.5,
         max_tokens: 50,
         output: OutputFormat::Verbose,
@@ -160,6 +164,8 @@ fn test_cli_argument_combinations() {
         input: Some("test".to_string()),
         stdin: false,
         model: "test-model".to_string(),
+        local_path: None,
+        config: None,
         temperature: 2.0, // Maximum allowed
         max_tokens: 512,  // Maximum allowed
         output: OutputFormat::Text,
@@ -205,8 +211,9 @@ async fn test_actual_typo_fixer_model() -> Result<()> {
     
     println!("🧪 Testing with actual typo-fixer model (once download completes)");
     
-    let mut typo_fixer = TypoFixerLib::new(
-        Some("mazhewitt/qwen-typo-fixer".to_string()),
+    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
+    let mut typo_fixer = TypoFixerLib::new_from_local(
+        working_model_path.to_string(),
         true
     ).await?;
     

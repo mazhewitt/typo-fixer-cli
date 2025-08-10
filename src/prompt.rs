@@ -21,8 +21,14 @@ impl PromptTemplate {
         Self { examples }
     }
 
-    /// Create a typo correction prompt with few-shot examples
+    /// Create a typo correction prompt using the simple format that works with the model
     pub fn create_correction_prompt(&self, input_text: &str) -> String {
+    // Default to richer few-shot format (backward compat kept via create_few_shot_prompt)
+    self.create_few_shot_prompt(input_text)
+    }
+
+    /// Create a typo correction prompt with few-shot examples (alternative format)
+    pub fn create_few_shot_prompt(&self, input_text: &str) -> String {
         let mut prompt = String::new();
         
         prompt.push_str("Fix typos in these sentences:\n\n");
@@ -99,8 +105,9 @@ mod tests {
         assert_eq!(template.example_count(), initial_count + 1);
         
         let prompt = template.create_correction_prompt("test");
-        assert!(prompt.contains("definately wrong"));
-        assert!(prompt.contains("definitely wrong"));
+    // few-shot prompt includes examples before replacement; ensure custom example present
+    assert!(prompt.contains("definately wrong"));
+    assert!(prompt.contains("definitely wrong"));
     }
 
     #[test]
@@ -112,10 +119,10 @@ mod tests {
         assert_eq!(template.example_count(), 0);
         
         let prompt = template.create_correction_prompt("test");
-        // Should still have basic structure but no examples
-        assert!(prompt.contains("Fix typos in these sentences:"));
-        assert!(prompt.contains("Input: test"));
-        assert!(prompt.ends_with("Output:"));
+    // With no examples, still returns few-shot header + our input
+    assert!(prompt.starts_with("Fix typos in these sentences:"));
+    assert!(prompt.contains("Input: test"));
+    assert!(prompt.ends_with("Output:"));
     }
 
     #[test]
@@ -125,8 +132,8 @@ mod tests {
         
         // Check basic structure
         let lines: Vec<&str> = prompt.lines().collect();
-        assert!(lines[0] == "Fix typos in these sentences:");
-        assert!(lines[1] == "");
+    assert_eq!(lines[0], "Fix typos in these sentences:");
+    assert_eq!(lines[1], "");
         
         // Should end with our input
         assert!(prompt.ends_with("Input: hello wrold\nOutput:"));

@@ -11,9 +11,10 @@ async fn test_actual_typo_fixing_simple_case() -> Result<()> {
 
     println!("🧪 Testing actual typo fixing with simple case");
     
-    // Try to create the typo fixer with your model
-    let mut typo_fixer = match TypoFixerLib::new(
-        Some("mazhewitt/qwen-typo-fixer".to_string()), 
+    // Try to create the typo fixer with the local working model
+    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
+    let mut typo_fixer = match TypoFixerLib::new_from_local(
+        working_model_path.to_string(), 
         true
     ).await {
         Ok(fixer) => {
@@ -52,28 +53,30 @@ async fn test_actual_typo_fixing_simple_case() -> Result<()> {
 #[tokio::test]
 #[ignore] // Run manually
 async fn test_try_working_model_first() -> Result<()> {
-    use candle_coreml::{model_downloader, QwenModel, QwenConfig};
+    // Using TypoFixerLib now (imported below)
     
     println!("🧪 Testing with a known working Qwen model first");
     
-    // Try a known working model from candle-coreml examples
-    let working_model_id = "anemll/anemll-Qwen-Qwen3-0.6B-ctx512_0.3.4";
+    // Use the local working model provided by the user
+    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
     
-    println!("📥 Downloading working model: {}", working_model_id);
+    println!("📁 Using local working model: {}", working_model_path);
     
-    let model_path = model_downloader::ensure_model_downloaded(working_model_id, true)?;
+    let model_path = std::path::Path::new(working_model_path);
     println!("✅ Model downloaded to: {:?}", model_path);
     
-    let config = QwenConfig::default();
-    let mut model = QwenModel::load_from_directory(&model_path, Some(config))?;
-    println!("✅ QwenModel loaded successfully");
+    // Use the same code path as the main app via TypoFixerLib
+    use typo_fixer_cli::TypoFixerLib;
     
-    // Test basic generation
+    let mut typo_fixer = TypoFixerLib::new_from_local(working_model_path.to_string(), true).await?;
+    println!("✅ TypoFixerLib loaded successfully");
+    
+    // Test basic typo fixing (same as main app does)
     let test_text = "The quick brown fox";
-    println!("🔤 Testing generation with: '{}'", test_text);
+    println!("🔤 Testing typo fixing with: '{}'", test_text);
     
-    let result = model.generate_text(test_text, 10, 0.0)?;
-    println!("🎯 Generated: '{}'", result);
+    let result = typo_fixer.fix_typos_with_options(test_text, 0.0, Some(10)).await?;
+    println!("🎯 Fixed text: '{}'", result);
     
     println!("🎉 Working model test completed - this proves candle-coreml integration works");
     Ok(())

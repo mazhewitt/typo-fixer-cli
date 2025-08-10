@@ -17,6 +17,14 @@ pub struct Args {
     #[arg(short, long, default_value = "mazhewitt/qwen-typo-fixer")]
     pub model: String,
 
+    /// Path to local model directory (overrides --model)
+    #[arg(long)]
+    pub local_path: Option<String>,
+
+    /// Path to model configuration file (JSON format)
+    #[arg(long)]
+    pub config: Option<String>,
+
     /// Sampling temperature (0.0 = deterministic, higher = more creative)
     #[arg(short, long, default_value = "0.1")]
     pub temperature: f32,
@@ -63,6 +71,12 @@ impl Args {
             ));
         }
 
+        if self.config.is_some() && self.local_path.is_none() {
+            return Err(anyhow::anyhow!(
+                "Configuration file (--config) requires local model path (--local-path)"
+            ));
+        }
+
         if !(0.0..=2.0).contains(&self.temperature) {
             return Err(anyhow::anyhow!(
                 "Temperature must be between 0.0 and 2.0, got {}",
@@ -91,6 +105,8 @@ mod tests {
             input: Some("test input".to_string()),
             stdin: false,
             model: "test-model".to_string(),
+            local_path: None,
+            config: None,
             temperature: 0.5,
             max_tokens: 50,
             output: OutputFormat::Text,
@@ -107,6 +123,8 @@ mod tests {
             input: None,
             stdin: true,
             model: "test-model".to_string(),
+            local_path: None,
+            config: None,
             temperature: 0.5,
             max_tokens: 50,
             output: OutputFormat::Text,
@@ -123,6 +141,8 @@ mod tests {
             input: None,
             stdin: false,
             model: "test-model".to_string(),
+            local_path: None,
+            config: None,
             temperature: 0.5,
             max_tokens: 50,
             output: OutputFormat::Text,
@@ -139,6 +159,8 @@ mod tests {
             input: Some("test".to_string()),
             stdin: true,
             model: "test-model".to_string(),
+            local_path: None,
+            config: None,
             temperature: 0.5,
             max_tokens: 50,
             output: OutputFormat::Text,
@@ -155,6 +177,8 @@ mod tests {
             input: Some("test".to_string()),
             stdin: false,
             model: "test-model".to_string(),
+            local_path: None,
+            config: None,
             temperature: 3.0, // Invalid
             max_tokens: 50,
             output: OutputFormat::Text,
@@ -165,6 +189,41 @@ mod tests {
         assert!(args.validate().is_err());
 
         args.temperature = 0.5; // Valid
+        assert!(args.validate().is_ok());
+    }
+
+    #[test]
+    fn test_config_validation() {
+        // Config requires local_path
+        let args = Args {
+            input: Some("test".to_string()),
+            stdin: false,
+            model: "test-model".to_string(),
+            local_path: None,
+            config: Some("config.json".to_string()),
+            temperature: 0.5,
+            max_tokens: 50,
+            output: OutputFormat::Text,
+            verbose: false,
+            batch: false,
+        };
+
+        assert!(args.validate().is_err());
+
+        // Config with local_path should be valid
+        let args = Args {
+            input: Some("test".to_string()),
+            stdin: false,
+            model: "test-model".to_string(),
+            local_path: Some("/path/to/model".to_string()),
+            config: Some("config.json".to_string()),
+            temperature: 0.5,
+            max_tokens: 50,
+            output: OutputFormat::Text,
+            verbose: false,
+            batch: false,
+        };
+
         assert!(args.validate().is_ok());
     }
 }
