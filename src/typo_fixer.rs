@@ -65,16 +65,34 @@ impl TypoFixer {
 
             // Use custom config if provided, otherwise try to get config by model ID
             let config = custom_config.unwrap_or_else(|| {
-                // First try to get built-in configuration by model ID
-                if let Some(model_config) = get_builtin_config(model_id) {
-                    if verbose {
-                        println!("🔧 Using built-in configuration for model: {}", model_id);
+                if let Some(mut model_config) = get_builtin_config(model_id) {
+                    if verbose { println!("🔧 Using built-in configuration for model: {}", model_id); }
+                    // Attempt to patch component file paths relative to downloaded directory
+                    if let Some(path_str) = model_path.to_str() {
+                        let base = std::path::Path::new(path_str);
+                        // Reuse the same helper logic as local load
+                        #[allow(unused)]
+                        fn adjust(model_config: &mut ModelConfig, base_dir: &std::path::Path, verbose: bool) {
+                            use std::path::PathBuf;
+                            for (name, comp) in model_config.components.iter_mut() {
+                                if let Some(fp) = comp.file_path.clone() {
+                                    let original = PathBuf::from(&fp);
+                                    if original.exists() { continue; }
+                                    if let Some(fname) = original.file_name() {
+                                        let candidate = base_dir.join(fname);
+                                        if candidate.exists() {
+                                            comp.file_path = Some(candidate.to_string_lossy().to_string());
+                                            if verbose { println!("🔄 Updated {} component path -> {}", name, candidate.display()); }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        adjust(&mut model_config, base, verbose);
                     }
                     QwenConfig::from_model_config(model_config)
                 } else {
-                    if verbose {
-                        println!("🔧 Using default configuration");
-                    }
+                    if verbose { println!("🔧 Using default configuration"); }
                     QwenConfig::default()
                 }
             });

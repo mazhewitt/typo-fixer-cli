@@ -13,16 +13,16 @@
   "components": {
     "embeddings": {
       "file_path": "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane/qwen-typo-fixer_embeddings.mlpackage",
-      "inputs": {"input_ids": {"name": "input_ids", "shape": [1, 64], "data_type": "INT32"}},
-      "outputs": {"hidden_states": {"name": "hidden_states", "shape": [1, 64, 1024], "data_type": "FLOAT16"}},
+      "inputs": {"input_ids": {"name": "input_ids", "shape": [1, 1], "data_type": "INT32"}},
+      "outputs": {"hidden_states": {"name": "hidden_states", "shape": [1, 1, 1024], "data_type": "FLOAT16"}},
       "functions": []
     },
     "ffn_prefill": {
       "file_path": "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane/qwen-typo-fixer_FFN_PF_lut4_chunk_01of01.mlpackage",
       "inputs": {
-        "hidden_states": {"name": "hidden_states", "shape": [1, 64, 1024], "data_type": "FLOAT16"},
-        "position_ids": {"name": "position_ids", "shape": [64], "data_type": "INT32"},
-        "causal_mask": {"name": "causal_mask", "shape": [1, 1, 64, 256], "data_type": "FLOAT16"},
+        "hidden_states": {"name": "hidden_states", "shape": [1, 1, 1024], "data_type": "FLOAT16"},
+        "position_ids": {"name": "position_ids", "shape": [1], "data_type": "INT32"},
+        "causal_mask": {"name": "causal_mask", "shape": [1, 1, 1, 256], "data_type": "FLOAT16"},
         "current_pos": {"name": "current_pos", "shape": [1], "data_type": "INT32"}
       },
       "outputs": {"output_hidden_states": {"name": "output_hidden_states", "shape": [1, 1, 1024], "data_type": "FLOAT16"}},
@@ -31,11 +31,13 @@
     "ffn_infer": {
       "file_path": "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane/qwen-typo-fixer_FFN_lut4_chunk_01of01.mlpackage",
       "inputs": {
-        "hidden_states": {"name": "hidden_states", "shape": [1, 64, 1024], "data_type": "FLOAT16"},
-        "position_ids": {"name": "position_ids", "shape": [64], "data_type": "INT32"},
-        "causal_mask": {"name": "causal_mask", "shape": [1, 1, 64, 256], "data_type": "FLOAT16"},
+  "hidden_states": {"name": "hidden_states", "shape": [1, 1, 1024], "data_type": "FLOAT16"},
+  "position_ids": {"name": "position_ids", "shape": [1], "data_type": "INT32"},
+  "update_mask": {"name": "update_mask", "shape": [1, 1, 256, 1], "data_type": "FLOAT16"},
+  "causal_mask": {"name": "causal_mask", "shape": [1, 1, 1, 256], "data_type": "FLOAT16"},
         "current_pos": {"name": "current_pos", "shape": [1], "data_type": "INT32"}
       },
+      "input_order": ["hidden_states", "position_ids", "update_mask", "causal_mask", "current_pos"],
       "outputs": {"output_hidden_states": {"name": "output_hidden_states", "shape": [1, 1, 1024], "data_type": "FLOAT16"}},
       "functions": []
     },
