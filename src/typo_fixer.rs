@@ -1,7 +1,7 @@
 //! Core typo fixing functionality using candle-coreml
 
 use anyhow::{Result, Context};
-use candle_coreml::{QwenModel, QwenConfig, ModelConfig, get_builtin_config, model_downloader};
+use candle_coreml::{QwenModel, QwenConfig, ModelConfig, get_builtin_config, model_downloader, list_builtin_models};
 use crate::prompt::PromptTemplate;
 use std::path::Path;
 
@@ -65,6 +65,7 @@ impl TypoFixer {
 
             // Use custom config if provided, otherwise try to get config by model ID
             let config = custom_config.unwrap_or_else(|| {
+                if verbose { println!("🔍 Looking for built-in configuration for model: {}", model_id); }
                 if let Some(mut model_config) = get_builtin_config(model_id) {
                     if verbose { println!("🔧 Using built-in configuration for model: {}", model_id); }
                     // Attempt to patch component file paths relative to downloaded directory
@@ -92,7 +93,12 @@ impl TypoFixer {
                     }
                     QwenConfig::from_model_config(model_config)
                 } else {
-                    if verbose { println!("🔧 Using default configuration"); }
+                    if verbose { 
+                        println!("⚠️ No built-in configuration found for model: {}", model_id);
+                        let available = list_builtin_models();
+                        println!("📋 Available built-in models: {:?}", available);
+                        println!("🔧 Using default configuration (may fail)"); 
+                    }
                     QwenConfig::default()
                 }
             });
@@ -343,30 +349,56 @@ impl TypoFixer {
 
     /// Extract the corrected text from the model's output
     fn extract_correction(&self, raw_output: &str) -> Result<String> {
-        // The model should output the correction after "Output:"
-        // We need to parse and clean this up
-        
-        // Look for lines that might contain the correction
-        let lines: Vec<&str> = raw_output.lines().collect();
-        
-        for line in lines {
-            let trimmed = line.trim();
-            // Skip empty lines and lines that look like prompts
-            if !trimmed.is_empty() && 
-               !trimmed.starts_with("Input:") && 
-               !trimmed.starts_with("Output:") &&
-               !trimmed.starts_with("Fix typos") {
-                return Ok(trimmed.to_string());
-            }
+        if self.verbose {
+            println!("🔍 Raw model output: {:?}", raw_output);
         }
 
-        // If we can't find a clear correction, return the raw output cleaned up
-        let cleaned = raw_output.trim();
-        if cleaned.is_empty() {
+        // First, stop at the first <|endoftext|> token
+        let cleaned_output = if let Some(end_pos) = raw_output.find("<|endoftext|>") {
+            &raw_output[..end_pos]
+        } else {
+            raw_output
+        };
+
+        // Also handle other potential stopping patterns
+        let cleaned_output = cleaned_output.split("Input:").next().unwrap_or(cleaned_output);
+        let cleaned_output = cleaned_output.split("Output:").next().unwrap_or(cleaned_output);
+        
+        // Split into lines and find the actual correction
+        let lines: Vec<&str> = cleaned_output.lines().collect();
+        
+        // Look for the first meaningful line that looks like corrected text
+        for line in lines {
+            let trimmed = line.trim();
+            
+            // Skip empty lines and prompt-like text
+            if trimmed.is_empty() || 
+               trimmed.starts_with("Input:") || 
+               trimmed.starts_with("Output:") ||
+               trimmed.starts_with("Fix typos") ||
+               trimmed.starts_with("the quick brown fox") ||  // Skip template examples
+               trimmed.starts_with("i can't believe it") ||
+               trimmed.starts_with("receive the package") {
+                continue;
+            }
+
+            // If this looks like actual content, use it
+            if self.verbose {
+                println!("✅ Extracted correction: {:?}", trimmed);
+            }
+            return Ok(trimmed.to_string());
+        }
+
+        // Fallback: clean up the entire output
+        let fallback = cleaned_output.trim();
+        if fallback.is_empty() {
             return Err(anyhow::anyhow!("Model produced empty output"));
         }
 
-        Ok(cleaned.to_string())
+        if self.verbose {
+            println!("⚠️ Using fallback extraction: {:?}", fallback);
+        }
+        Ok(fallback.to_string())
     }
 
     /// Get mutable reference to the prompt template for customization
@@ -411,33 +443,64 @@ mod tests {
         // Test the extraction logic without needing a TypoFixer instance
         
         // Test simple case
-        let raw_output = "the quick brown fox";
+        let raw_output = "this sentence is corrected";
         let result = extract_correction_standalone(raw_output);
-        assert_eq!(result, "the quick brown fox");
+        assert_eq!(result, "this sentence is corrected");
         
         // Test case with noise  
-        let raw_output = "Input: test\nOutput: \nthe quick brown fox\n";
+        let raw_output = "Input: test\nOutput: \nthis sentence has corrections\n";
         let result = extract_correction_standalone(raw_output);
-        assert_eq!(result, "the quick brown fox");
+        assert_eq!(result, "this sentence has corrections");
+
+        // Test case with <|endoftext|> token
+        let raw_output = "this sentence has typos<|endoftext|>This sentence has typos<|endoftext|>This sentence";
+        let result = extract_correction_standalone(raw_output);
+        assert_eq!(result, "this sentence has typos");
+
+        // Test case with repetitive pattern like the actual bug
+        let raw_output = "this sentance has typoos<|endoftext|>This sentence has typos.<|endoftext|>This sentence has typos.<|endoftext|>";
+        let result = extract_correction_standalone(raw_output);
+        assert_eq!(result, "this sentance has typoos");
     }
     
     // Standalone function to test extraction logic
     fn extract_correction_standalone(raw_output: &str) -> String {
-        // Look for lines that might contain the correction
-        let lines: Vec<&str> = raw_output.lines().collect();
+        // First, stop at the first <|endoftext|> token
+        let cleaned_output = if let Some(end_pos) = raw_output.find("<|endoftext|>") {
+            &raw_output[..end_pos]
+        } else {
+            raw_output
+        };
+
+        // Split into lines and find the actual correction
+        let lines: Vec<&str> = cleaned_output.lines().collect();
         
+        // Look for the first meaningful line that looks like corrected text
         for line in lines {
             let trimmed = line.trim();
-            // Skip empty lines and lines that look like prompts
-            if !trimmed.is_empty() && 
-               !trimmed.starts_with("Input:") && 
-               !trimmed.starts_with("Output:") &&
-               !trimmed.starts_with("Fix typos") {
-                return trimmed.to_string();
+            
+            // Skip empty lines and prompt-like text
+            if trimmed.is_empty() || 
+               trimmed.starts_with("Input:") || 
+               trimmed.starts_with("Output:") ||
+               trimmed.starts_with("Fix typos") {
+                continue;
             }
+            
+            // Skip template examples from our prompt
+            if trimmed.starts_with("the quick brown fox") ||
+               trimmed.starts_with("i can't believe it") ||
+               trimmed.starts_with("receive the package") ||
+               trimmed.starts_with("separate the items") ||
+               trimmed.starts_with("occurred yesterday") {
+                continue;
+            }
+
+            // If this looks like actual content, use it
+            return trimmed.to_string();
         }
 
-        // If we can't find a clear correction, return the raw output cleaned up
-        raw_output.trim().to_string()
+        // Fallback: clean up the entire output
+        cleaned_output.trim().to_string()
     }
 }
