@@ -2,7 +2,8 @@ use anyhow::Result;
 use clap::Parser;
 use std::io::{self, Read};
 use serde_json::json;
-
+use tracing::debug;
+use tracing_subscriber::fmt;
 use typo_fixer_cli::{TypoFixerLib, cli::{Args, OutputFormat}};
 
 #[tokio::main]
@@ -17,6 +18,15 @@ async fn main() -> Result<()> {
         println!("   Model: {}", args.model);
         println!("   Temperature: {}", args.temperature);
         println!("   Max tokens: {}", args.max_tokens);
+    }
+
+    let subscriber = fmt::Subscriber::builder()
+        .with_env_filter("debug") // Adjust the filter level as needed (e.g., "info", "warn", etc.)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)?;
+
+    if args.verbose {
+        debug!("Tracing subscriber set up with env filter 'debug'");
     }
     
     // Initialize the typo fixer

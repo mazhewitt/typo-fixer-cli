@@ -25,12 +25,12 @@ pub struct Args {
     #[arg(long)]
     pub config: Option<String>,
 
-    /// Sampling temperature (0.0 = deterministic, higher = more creative)
-    #[arg(short, long, default_value = "0.1")]
+    /// Sampling temperature (0.0 = deterministic/greedy, higher = more creative)
+    #[arg(short, long, default_value = "0.0")]
     pub temperature: f32,
 
-    /// Maximum number of tokens to generate
-    #[arg(long, default_value = "50")]
+    /// Maximum number of tokens to generate (optimized default: 25)
+    #[arg(long, default_value = "25")]
     pub max_tokens: usize,
 
     /// Output format: text, json, or verbose

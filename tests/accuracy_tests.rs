@@ -11,7 +11,7 @@ use tokio;
 async fn test_cli_integration_with_working_model() -> Result<()> {
     println!("🧪 Testing CLI integration with working Qwen model");
     
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
+    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane-flex";
     
     // Test 1: Simple text completion (demonstrating the infrastructure works)
     let output = Command::new("cargo")
@@ -36,8 +36,25 @@ async fn test_cli_integration_with_working_model() -> Result<()> {
     let stdout = String::from_utf8_lossy(&output.stdout);
     println!("✅ CLI output: {}", stdout);
     
+    // Extract JSON from output (it should be at the end, starting with '{' and ending with '}')
+    let json_str = if let Some(json_start) = stdout.rfind('{') {
+        if let Some(json_end) = stdout.rfind('}') {
+            if json_end > json_start {
+                &stdout[json_start..=json_end]
+            } else {
+                return Err(anyhow::anyhow!("Invalid JSON structure in output"));
+            }
+        } else {
+            return Err(anyhow::anyhow!("No closing brace found for JSON"));
+        }
+    } else {
+        return Err(anyhow::anyhow!("No JSON found in output"));
+    };
+    
+    println!("📄 Extracted JSON: {}", json_str);
+    
     // Parse JSON output
-    let json: Value = serde_json::from_str(&stdout)
+    let json: Value = serde_json::from_str(json_str)
         .map_err(|e| anyhow::anyhow!("Failed to parse JSON output: {}", e))?;
     
     // Validate JSON structure
@@ -71,8 +88,8 @@ async fn test_typo_fixing_prompt_engineering() {
     
     // Validate prompt structure
     assert!(prompt.contains("Fix typos in these sentences:"), "Should contain instruction");
-    assert!(prompt.contains("Input: the quik brown fox"), "Should contain example input");
-    assert!(prompt.contains("Output: the quick brown fox"), "Should contain example output");
+    assert!(prompt.contains("Input: I beleive this is teh answer."), "Should contain example input");
+    assert!(prompt.contains("Output: I believe this is the answer."), "Should contain example output");
     assert!(prompt.contains("Input: this sentance has typoos"), "Should contain our input");
     assert!(prompt.ends_with("Output:"), "Should end with Output:");
     
@@ -211,7 +228,7 @@ async fn test_actual_typo_fixer_model() -> Result<()> {
     
     println!("🧪 Testing with actual typo-fixer model (once download completes)");
     
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
+    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane-flex";
     let mut typo_fixer = TypoFixerLib::new_from_local(
         working_model_path.to_string(),
         true
