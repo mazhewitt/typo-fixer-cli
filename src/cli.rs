@@ -3,7 +3,7 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about = "Fix typos using fine-tuned Qwen models", long_about = None)]
+#[command(author, version, about = "Fix typos using fine-tuned Qwen models with automatic CoreML download", long_about = None)]
 pub struct Args {
     /// Input text to fix typos in
     #[arg(value_name = "TEXT")]
@@ -13,8 +13,8 @@ pub struct Args {
     #[arg(short, long)]
     pub stdin: bool,
 
-    /// Model ID from HuggingFace Hub
-    #[arg(short, long, default_value = "mazhewitt/qwen-typo-fixer")]
+    /// Model ID from HuggingFace Hub (CoreML models automatically downloaded)
+    #[arg(short, long, default_value = "mazhewitt/qwen-typo-fixer-coreml")]
     pub model: String,
 
     /// Path to local model directory (overrides --model)

@@ -1,7 +1,7 @@
 //! Core typo fixing functionality using candle-coreml
 
 use anyhow::{Result, Context};
-use candle_coreml::{QwenModel, QwenConfig, ModelConfig, get_builtin_config, model_downloader, list_builtin_models};
+use candle_coreml::{QwenModel, QwenConfig, ModelConfig, UnifiedModelLoader};
 use crate::prompt::PromptTemplate;
 use std::path::Path;
 
@@ -46,69 +46,23 @@ impl TypoFixer {
         Self::load_model(model_id, verbose, custom_config).await
     }
 
-    /// Load the model from HuggingFace Hub using candle-coreml
-    async fn load_model(model_id: &str, verbose: bool, custom_config: Option<QwenConfig>) -> Result<Self> {
+    /// Load the model from HuggingFace Hub using UnifiedModelLoader
+    async fn load_model(model_id: &str, verbose: bool, _custom_config: Option<QwenConfig>) -> Result<Self> {
         #[cfg(target_os = "macos")]
         {
             if verbose {
-                println!("📥 Downloading model from HuggingFace Hub...");
+                println!("🚀 Loading model with UnifiedModelLoader: {}", model_id);
             }
 
-            // Download the model from HuggingFace Hub
-            let model_path = model_downloader::ensure_model_downloaded(model_id, verbose)
-                .context("Failed to download model from HuggingFace Hub")?;
+            // Use the new UnifiedModelLoader which handles downloading, config generation, and model loading
+            let loader = UnifiedModelLoader::new()
+                .context("Failed to create UnifiedModelLoader")?;
+
+            let model = loader.load_model(model_id)
+                .context("Failed to load model using UnifiedModelLoader")?;
 
             if verbose {
-                println!("📦 Model downloaded to: {:?}", model_path);
-                println!("🔧 Loading QwenModel components...");
-            }
-
-            // Use custom config if provided, otherwise try to get config by model ID
-            let config = custom_config.unwrap_or_else(|| {
-                if verbose { println!("🔍 Looking for built-in configuration for model: {}", model_id); }
-                if let Some(mut model_config) = get_builtin_config(model_id) {
-                    if verbose { println!("🔧 Using built-in configuration for model: {}", model_id); }
-                    // Attempt to patch component file paths relative to downloaded directory
-                    if let Some(path_str) = model_path.to_str() {
-                        let base = std::path::Path::new(path_str);
-                        // Reuse the same helper logic as local load
-                        #[allow(unused)]
-                        fn adjust(model_config: &mut ModelConfig, base_dir: &std::path::Path, verbose: bool) {
-                            use std::path::PathBuf;
-                            for (name, comp) in model_config.components.iter_mut() {
-                                if let Some(fp) = comp.file_path.clone() {
-                                    let original = PathBuf::from(&fp);
-                                    if original.exists() { continue; }
-                                    if let Some(fname) = original.file_name() {
-                                        let candidate = base_dir.join(fname);
-                                        if candidate.exists() {
-                                            comp.file_path = Some(candidate.to_string_lossy().to_string());
-                                            if verbose { println!("🔄 Updated {} component path -> {}", name, candidate.display()); }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        adjust(&mut model_config, base, verbose);
-                    }
-                    QwenConfig::from_model_config(model_config)
-                } else {
-                    if verbose { 
-                        println!("⚠️ No built-in configuration found for model: {}", model_id);
-                        let available = list_builtin_models();
-                        println!("📋 Available built-in models: {:?}", available);
-                        println!("🔧 Using default configuration (may fail)"); 
-                    }
-                    QwenConfig::default()
-                }
-            });
-
-            // Load the QwenModel from the downloaded components
-            let model = QwenModel::load_from_directory(&model_path, Some(config))
-                .context("Failed to load QwenModel from downloaded components")?;
-
-            if verbose {
-                println!("✅ QwenModel loaded successfully");
+                println!("✅ QwenModel loaded successfully via UnifiedModelLoader");
             }
 
             // Create the prompt template with examples suitable for typo fixing
@@ -124,7 +78,7 @@ impl TypoFixer {
         #[cfg(not(target_os = "macos"))]
         {
             // On non-macOS platforms, return an appropriate error
-            let _ = (model_id, verbose, custom_config); // Use parameters to avoid warnings
+            let _ = (model_id, verbose, _custom_config); // Use parameters to avoid warnings
             Err(anyhow::anyhow!(
                 "Model loading is only supported on macOS with CoreML. Current platform is not supported."
             ))

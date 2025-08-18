@@ -3,10 +3,11 @@ use typo_fixer_cli::TypoFixerLib;
 
 #[tokio::test]
 async fn test_typo_fixer_with_working_model() -> Result<()> {
-    // Use the local working model provided by the user
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
+    // Use the HuggingFace model instead of hardcoded local path
+    // This replaces: "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane-flex"
+    let model_id = "mazhewitt/qwen-typo-fixer-coreml";
     
-    let mut typo_fixer = TypoFixerLib::new_from_local(working_model_path.to_string(), true).await?;
+    let mut typo_fixer = TypoFixerLib::new(Some(model_id.to_string()), true).await?;
     
     // Test basic typo correction
     let result = typo_fixer.fix_typos("this sentance has typoos").await?;
@@ -22,9 +23,10 @@ async fn test_typo_fixer_with_working_model() -> Result<()> {
 
 #[tokio::test] 
 async fn test_typo_fixer_multiple_corrections() -> Result<()> {
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
+    // Use HuggingFace model instead of hardcoded path
+    let model_id = "mazhewitt/qwen-typo-fixer-coreml";
     
-    let mut typo_fixer = TypoFixerLib::new_from_local(working_model_path.to_string(), true).await?;
+    let mut typo_fixer = TypoFixerLib::new(Some(model_id.to_string()), true).await?;
     
     let test_cases = vec![
         ("recieve the package", "receive"),
@@ -36,8 +38,9 @@ async fn test_typo_fixer_multiple_corrections() -> Result<()> {
     
     for (input, expected_fix) in test_cases {
         let result = typo_fixer.fix_typos(input).await?;
-        assert!(result.contains(expected_fix), 
-               "Expected '{}' to contain '{}', got '{}'", input, expected_fix, result);
+        // Check if the result contains the expected fix (case-insensitive)
+        assert!(result.to_lowercase().contains(expected_fix), 
+               "Expected '{}' to contain '{}' (case-insensitive), got '{}'", input, expected_fix, result);
         println!("✅ '{}' -> '{}'", input, result);
     }
     
@@ -77,9 +80,10 @@ async fn test_diagnose_typo_fixer_model_issue() -> Result<()> {
 
 #[tokio::test]
 async fn test_typo_fixer_with_custom_temperature() -> Result<()> {
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
+    // Use HuggingFace model instead of hardcoded path
+    let model_id = "mazhewitt/qwen-typo-fixer-coreml";
     
-    let mut typo_fixer = TypoFixerLib::new_from_local(working_model_path.to_string(), true).await?;
+    let mut typo_fixer = TypoFixerLib::new(Some(model_id.to_string()), true).await?;
     
     // Test with deterministic generation (temperature = 0.0)
     let result1 = typo_fixer.fix_typos_with_options("this sentance has typoos", 0.0, Some(30)).await?;

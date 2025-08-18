@@ -53,7 +53,7 @@ async fn test_wrong_shapes_cause_failures() -> Result<()> {
         model_type: "qwen-ffn-prefill".to_string(),
     };
     
-    let mut prefill_model = CoreMLModel::load_with_function(&prefill_path, &prefill_config, "prefill")?;
+    let prefill_model = CoreMLModel::load_with_function(&prefill_path, &prefill_config, "prefill")?;
     println!("✅ Prefill model loaded");
     
     // Create some dummy hidden_states and current_pos for testing

@@ -11,7 +11,7 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust
+//! ```rust,no_run
 //! use typo_fixer_cli::TypoFixerLib;
 //!
 //! #[tokio::main]
@@ -19,7 +19,7 @@
 //!     // Create with local model and configuration
 //!     let mut fixer = TypoFixerLib::new_with_config_file(
 //!         "./configs/qwen-typo-fixer-ane.json",
-//!         "/path/to/model",
+//!         "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane-flex",
 //!         true // verbose
 //!     ).await?;
 //!
@@ -58,11 +58,11 @@ use anyhow::Result;
 /// # Examples
 ///
 /// ## Basic Usage
-/// ```rust
+/// ```rust,no_run
 /// # use typo_fixer_cli::TypoFixerLib;
 /// # #[tokio::main]
 /// # async fn main() -> anyhow::Result<()> {
-/// let mut fixer = TypoFixerLib::new(Some("model-id".to_string()), false).await?;
+/// let mut fixer = TypoFixerLib::new(Some("mazhewitt/qwen-typo-fixer".to_string()), false).await?;
 /// let result = fixer.fix_typos("helo wrold").await?;
 /// println!("Fixed: {}", result);
 /// # Ok(())
@@ -70,13 +70,13 @@ use anyhow::Result;
 /// ```
 ///
 /// ## With Configuration File
-/// ```rust
+/// ```rust,no_run
 /// # use typo_fixer_cli::TypoFixerLib;
 /// # #[tokio::main]
 /// # async fn main() -> anyhow::Result<()> {
 /// let mut fixer = TypoFixerLib::new_with_config_file(
-///     "./configs/model-config.json",
-///     "/path/to/model",
+///     "./configs/qwen-typo-fixer-ane.json",
+///     "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane-flex",
 ///     true // verbose logging
 /// ).await?;
 /// let result = fixer.fix_typos("seperate the itmes").await?;

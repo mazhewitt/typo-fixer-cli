@@ -11,10 +11,10 @@ async fn test_actual_typo_fixing_simple_case() -> Result<()> {
 
     println!("🧪 Testing actual typo fixing with simple case");
     
-    // Try to create the typo fixer with the local working model
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
-    let mut typo_fixer = match TypoFixerLib::new_from_local(
-        working_model_path.to_string(), 
+    // Try to create the typo fixer with HuggingFace model
+    let model_id = "mazhewitt/qwen-typo-fixer-coreml";
+    let mut typo_fixer = match TypoFixerLib::new(
+        Some(model_id.to_string()), 
         true
     ).await {
         Ok(fixer) => {
@@ -57,18 +57,18 @@ async fn test_try_working_model_first() -> Result<()> {
     
     println!("🧪 Testing with a known working Qwen model first");
     
-    // Use the local working model provided by the user
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
+    // Use the HuggingFace model 
+    let model_id = "mazhewitt/qwen-typo-fixer-coreml";
     
-    println!("📁 Using local working model: {}", working_model_path);
+    println!("📁 Using HuggingFace model: {}", model_id);
     
-    let model_path = std::path::Path::new(working_model_path);
-    println!("✅ Model downloaded to: {:?}", model_path);
+    // Model will be downloaded automatically by TypoFixerLib
+    println!("✅ Model will be downloaded automatically when needed");
     
     // Use the same code path as the main app via TypoFixerLib
     use typo_fixer_cli::TypoFixerLib;
     
-    let mut typo_fixer = TypoFixerLib::new_from_local(working_model_path.to_string(), true).await?;
+    let mut typo_fixer = TypoFixerLib::new(Some(model_id.to_string()), true).await?;
     println!("✅ TypoFixerLib loaded successfully");
     
     // Test basic typo fixing (same as main app does)

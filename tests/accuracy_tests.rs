@@ -11,7 +11,7 @@ use tokio;
 async fn test_cli_integration_with_working_model() -> Result<()> {
     println!("🧪 Testing CLI integration with working Qwen model");
     
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane-flex";
+    let model_id = "mazhewitt/qwen-typo-fixer-coreml";
     
     // Test 1: Simple text completion (demonstrating the infrastructure works)
     let output = Command::new("cargo")
@@ -19,7 +19,7 @@ async fn test_cli_integration_with_working_model() -> Result<()> {
             "run", 
             "--", 
             "The quick brown fox",
-            "--local-path", working_model_path,
+            "--model", model_id,
             "--max-tokens", "5",
             "--temperature", "0.0",
             "--output", "json"
@@ -228,9 +228,9 @@ async fn test_actual_typo_fixer_model() -> Result<()> {
     
     println!("🧪 Testing with actual typo-fixer model (once download completes)");
     
-    let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane-flex";
-    let mut typo_fixer = TypoFixerLib::new_from_local(
-        working_model_path.to_string(),
+    let model_id = "mazhewitt/qwen-typo-fixer-coreml";
+    let mut typo_fixer = TypoFixerLib::new(
+        Some(model_id.to_string()),
         true
     ).await?;
     

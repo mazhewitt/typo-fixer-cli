@@ -21,7 +21,7 @@ async fn test_shapes_fix_approach() -> Result<()> {
     println!("  Context length: {}", model_config.shapes.context_length);
     
     // Create config from the built-in model config
-    let mut config = QwenConfig::from_model_config(model_config);
+    let config = QwenConfig::from_model_config(model_config);
     println!("✅ Created QwenConfig from built-in model config");
     
     // Load the model

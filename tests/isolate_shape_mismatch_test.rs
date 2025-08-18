@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use candle_coreml::{QwenModel, QwenConfig, get_builtin_config};
-use candle_core::Tensor;
 
 #[cfg(target_os = "macos")]
 #[tokio::test]
