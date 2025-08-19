@@ -1,7 +1,7 @@
 //! Test to validate if tensors with wrong shapes actually fail when used with CoreML models
 
 use anyhow::Result;
-use candle_coreml::{QwenConfig, get_builtin_config, CoreMLModel, Config as CoreMLConfig};
+use candle_coreml::{ConfigGenerator, QwenConfig, CoreMLModel, Config as CoreMLConfig};
 
 #[cfg(target_os = "macos")]
 #[tokio::test]
@@ -12,9 +12,13 @@ async fn test_wrong_shapes_cause_failures() -> Result<()> {
     let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
     let model_path = std::path::Path::new(working_model_path);
     
-    // Get the configuration
-    let model_config = get_builtin_config("mazhewitt/qwen-typo-fixer")
-        .ok_or_else(|| anyhow::anyhow!("No built-in config found"))?;
+    // Generate the configuration
+    let generator = ConfigGenerator::new()?;
+    let model_config = generator.generate_config_from_directory(
+        model_path,
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
     let config = QwenConfig::from_model_config(model_config);
     
     println!("\n🧪 TEST 1: Create tensors with CORRECT shapes for prefill");

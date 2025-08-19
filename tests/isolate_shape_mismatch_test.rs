@@ -1,7 +1,7 @@
 //! Precise test to isolate exactly where and why the shape mismatch occurs
 
 use anyhow::Result;
-use candle_coreml::{QwenModel, QwenConfig, get_builtin_config};
+use candle_coreml::{ConfigGenerator, QwenModel, QwenConfig};
 
 #[cfg(target_os = "macos")]
 #[tokio::test]
@@ -12,9 +12,13 @@ async fn isolate_exact_shape_mismatch() -> Result<()> {
     let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
     let model_path = std::path::Path::new(working_model_path);
     
-    // Use built-in config with explicit paths
-    let model_config = get_builtin_config("mazhewitt/qwen-typo-fixer")
-        .ok_or_else(|| anyhow::anyhow!("No built-in config found"))?;
+    // Generate config from the local directory
+    let generator = ConfigGenerator::new()?;
+    let model_config = generator.generate_config_from_directory(
+        model_path,
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
     let config = QwenConfig::from_model_config(model_config);
     
     let mut model = QwenModel::load_from_directory(model_path, Some(config))?;
@@ -96,8 +100,12 @@ async fn isolate_exact_shape_mismatch() -> Result<()> {
 async fn isolate_tensor_creation_shapes() -> Result<()> {
     println!("🔍 ISOLATION TEST: Testing individual tensor creation");
     
-    let model_config = get_builtin_config("mazhewitt/qwen-typo-fixer")
-        .ok_or_else(|| anyhow::anyhow!("No built-in config found"))?;
+    let generator = ConfigGenerator::new()?;
+    let model_config = generator.generate_config_from_directory(
+        std::path::Path::new("/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane"),
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
     let qwen_config = QwenConfig::from_model_config(model_config);
     
     // Test position_ids creation for different scenarios
@@ -193,8 +201,12 @@ async fn test_step_by_step_inference_with_logging() -> Result<()> {
     let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
     let model_path = std::path::Path::new(working_model_path);
     
-    let model_config = get_builtin_config("mazhewitt/qwen-typo-fixer")
-        .ok_or_else(|| anyhow::anyhow!("No built-in config found"))?;
+    let generator = ConfigGenerator::new()?;
+    let model_config = generator.generate_config_from_directory(
+        model_path,
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
     let config = QwenConfig::from_model_config(model_config);
     
     let mut model = QwenModel::load_from_directory(model_path, Some(config))?;

@@ -1,7 +1,7 @@
 //! Test to implement and validate the fix for CoreML shapes issue
 
 use anyhow::Result;
-use candle_coreml::{QwenModel, QwenConfig, get_builtin_config};
+use candle_coreml::{ConfigGenerator, QwenModel, QwenConfig};
 
 #[cfg(target_os = "macos")]
 #[tokio::test]
@@ -12,9 +12,13 @@ async fn test_shapes_fix_approach() -> Result<()> {
     let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
     let model_path = std::path::Path::new(working_model_path);
     
-    // Get the built-in configuration
-    let model_config = get_builtin_config("mazhewitt/qwen-typo-fixer")
-        .ok_or_else(|| anyhow::anyhow!("No built-in config found"))?;
+    // Generate configuration from local directory
+    let generator = ConfigGenerator::new()?;
+    let model_config = generator.generate_config_from_directory(
+        model_path,
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
     
     println!("📊 Model config analysis:");
     println!("  Batch size: {}", model_config.shapes.batch_size);
@@ -98,9 +102,13 @@ async fn test_short_context_generation(model: &mut QwenModel) -> Result<()> {
 async fn test_modified_config_generation(model_path: &std::path::Path) -> Result<()> {
     println!("  Testing with modified configuration...");
     
-    // Get the original config
-    let original_config = get_builtin_config("mazhewitt/qwen-typo-fixer")
-        .ok_or_else(|| anyhow::anyhow!("No built-in config found"))?;
+    // Get the original config via generator
+    let generator = ConfigGenerator::new()?;
+    let original_config = generator.generate_config_from_directory(
+        model_path,
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
     
     println!("    Original batch_size: {}", original_config.shapes.batch_size);
     

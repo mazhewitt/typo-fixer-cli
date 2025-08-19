@@ -42,7 +42,7 @@ async fn test_load_typo_fixer_model_from_hub() -> Result<()> {
 #[tokio::test] 
 #[ignore] // Ignore by default since this requires model download
 async fn test_load_qwen_model_from_downloaded_components() -> Result<()> {
-    use candle_coreml::{QwenModel, QwenConfig};
+    use candle_coreml::{ConfigGenerator, QwenConfig, QwenModel};
     
     let working_model_path = "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane";
     
@@ -51,16 +51,14 @@ async fn test_load_qwen_model_from_downloaded_components() -> Result<()> {
     // Use the local working model
     let model_path = std::path::Path::new(working_model_path);
     
-    // Use the same configuration logic as the main app for typo-fixer models
-    use candle_coreml::get_builtin_config;
-    let config = if let Some(model_config) = get_builtin_config("mazhewitt/qwen-typo-fixer") {
-        println!("🔧 Using built-in typo-fixer configuration");
-        QwenConfig::from_model_config(model_config)
-    } else {
-        println!("⚠️ Built-in typo-fixer config not found, trying for_model_id");
-        QwenConfig::for_model_id("mazhewitt/qwen-typo-fixer")
-            .unwrap_or_else(|_| QwenConfig::default())
-    };
+    // Generate config directly from the local model directory (no network)
+    let generator = ConfigGenerator::new()?;
+    let model_config = generator.generate_config_from_directory(
+        model_path,
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
+    let config = QwenConfig::from_model_config(model_config);
     
     let model_result = QwenModel::load_from_directory(&model_path, Some(config));
     

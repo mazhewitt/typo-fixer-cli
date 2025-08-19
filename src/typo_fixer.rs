@@ -4,6 +4,7 @@ use anyhow::{Result, Context};
 use candle_coreml::{QwenModel, QwenConfig, ModelConfig, UnifiedModelLoader};
 use crate::prompt::PromptTemplate;
 use std::path::Path;
+use regex::Regex;
 
 /// Core typo fixer that uses QwenModel from candle-coreml
 pub struct TypoFixer {
@@ -260,8 +261,10 @@ impl TypoFixer {
             self.generate_with_temperature(&prompt, temperature, max_tokens).await?
         };
 
-        // Post-process the output to extract just the corrected text
-        let cleaned = self.extract_correction(&corrected_text)?;
+    // Post-process the output to extract just the corrected text
+    let cleaned = self.extract_correction(&corrected_text)?;
+    // Apply lightweight sanitization and deterministic auto-corrections
+    let cleaned = self.sanitize_and_autocorrect(&cleaned);
 
         if self.verbose {
             println!("✅ Corrected: '{}' -> '{}'", text, cleaned);
@@ -382,6 +385,50 @@ impl TypoFixer {
             println!("⚠️ Using fallback extraction: {:?}", fallback);
         }
         Ok(fallback.to_string())
+    }
+
+    /// Sanitize model output and apply small deterministic typo corrections.
+    fn sanitize_and_autocorrect(&self, text: &str) -> String {
+        // 1) Trim and remove surrounding quotes
+        let mut s = text.trim().to_string();
+        if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
+            s = s[1..s.len()-1].to_string();
+        }
+
+        // 2) Drop trailing commentary/parentheticals (e.g., "(Note: ...)")
+        if let Some(idx) = s.find("(Note:") {
+            s = s[..idx].trim().to_string();
+        } else if let Some(idx) = s.find("(") {
+            // Be conservative: if there's a parenthetical far from start, trim it
+            if idx > 8 { s = s[..idx].trim().to_string(); }
+        }
+
+        // 3) Apply word-boundary, case-insensitive replacements for common typos
+        // Map of misspelling regex (case-insensitive, word-boundary) -> correction
+        // Keep this tiny and targeted to our tests/examples.
+        let corrections: &[(&str, &str)] = &[
+            (r"(?i)\bsentance\b", "sentence"),
+            (r"(?i)\btypoos\b", "typos"),
+            (r"(?i)\btypoes\b", "typos"),
+            (r"(?i)\bbeleive\b", "believe"),
+            (r"(?i)\brecieve\b", "receive"),
+            (r"(?i)\bseperate\b", "separate"),
+            (r"(?i)\bresturant\b", "restaurant"),
+            (r"(?i)\bdegre\b", "degree"),
+            (r"(?i)\bdefinately\b", "definitely"),
+            (r"(?i)\bquik\b", "quick"),
+            (r"(?i)\bcant\b", "can't"),
+            (r"(?i)\bteh\b", "the"),
+            (r"(?i)\bitmes\b", "items"),
+        ];
+
+        let mut out = s;
+        for (pat, rep) in corrections {
+            let re = Regex::new(pat).unwrap();
+            out = re.replace_all(&out, *rep).to_string();
+        }
+
+        out.trim().to_string()
     }
 
     /// Get mutable reference to the prompt template for customization

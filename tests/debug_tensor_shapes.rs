@@ -1,16 +1,32 @@
 //! Debug test to understand tensor shape retrieval
 
 use anyhow::Result;
-use candle_coreml::{get_builtin_config, QwenConfig};
+use candle_coreml::{ConfigGenerator, QwenConfig};
 
 #[cfg(target_os = "macos")]
 #[tokio::test]
 #[ignore] 
 async fn debug_tensor_shapes() -> Result<()> {
     println!("🔍 Debugging tensor shape retrieval for typo-fixer model");
-    
-    let model_config = get_builtin_config("mazhewitt/qwen-typo-fixer")
-        .ok_or_else(|| anyhow::anyhow!("No built-in config found"))?;
+
+    // Allow overriding the local model path via env; otherwise use the legacy default.
+    let working_model_path = std::env::var("TYPO_FIXER_LOCAL_MODEL")
+        .unwrap_or_else(|_| "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane".to_string());
+    let model_path = std::path::Path::new(&working_model_path);
+    if !model_path.exists() {
+        println!(
+            "⚠️  Local model directory not found: {}\n   Set TYPO_FIXER_LOCAL_MODEL to a valid path or skip this ignored test.",
+            working_model_path
+        );
+        // Gracefully skip instead of failing hard when fixture isn't present
+        return Ok(());
+    }
+    let generator = ConfigGenerator::new()?;
+    let model_config = generator.generate_config_from_directory(
+        model_path,
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
         
     println!("📊 Model config components:");
     for (name, component) in &model_config.components {

@@ -1,7 +1,7 @@
 //! Targeted test to isolate and debug the CoreML shapes mismatch issue
 
 use anyhow::Result;
-use candle_coreml::{QwenModel, QwenConfig, get_builtin_config};
+use candle_coreml::{ConfigGenerator, QwenModel, QwenConfig};
 
 #[cfg(target_os = "macos")]
 #[tokio::test]
@@ -31,25 +31,17 @@ async fn test_isolate_shapes_issue() -> Result<()> {
         }
     }
     
-    // Step 2: Try different configuration approaches
+    // Step 2: Generate config from local model directory
     println!("\n🔧 Step 2: Configuration analysis");
-    
-    // Try built-in config
-    let builtin_config = get_builtin_config("mazhewitt/qwen-typo-fixer");
-    match builtin_config {
-        Some(model_config) => {
-            println!("✅ Found built-in config for mazhewitt/qwen-typo-fixer");
-            println!("   Config details: {:?}", model_config);
-            
-            let qwen_config = QwenConfig::from_model_config(model_config);
-            println!("   QwenConfig created from built-in model config");
-            
-            test_model_loading_and_shapes(&model_path, qwen_config, "built-in config").await?;
-        }
-        None => {
-            println!("❌ No built-in config found for mazhewitt/qwen-typo-fixer");
-        }
-    }
+    let generator = ConfigGenerator::new()?;
+    let model_config = generator.generate_config_from_directory(
+        &model_path,
+        "mazhewitt/qwen-typo-fixer",
+        "qwen",
+    )?;
+    let qwen_config = QwenConfig::from_model_config(model_config);
+    println!("   QwenConfig created from generated model config");
+    test_model_loading_and_shapes(&model_path, qwen_config, "generated config").await?;
     
     // Try for_model_id
     println!("\n🔧 Trying QwenConfig::for_model_id");

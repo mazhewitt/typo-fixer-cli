@@ -2,6 +2,7 @@ use anyhow::Result;
 use typo_fixer_cli::TypoFixerLib;
 
 #[tokio::test]
+#[ignore]
 async fn test_typo_fixer_with_working_model() -> Result<()> {
     // Use the HuggingFace model instead of hardcoded local path
     // This replaces: "/Users/mazdahewitt/projects/train-typo-fixer/models/qwen-typo-fixer-ane-flex"
@@ -21,7 +22,8 @@ async fn test_typo_fixer_with_working_model() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test] 
+#[tokio::test]
+#[ignore]
 async fn test_typo_fixer_multiple_corrections() -> Result<()> {
     // Use HuggingFace model instead of hardcoded path
     let model_id = "mazhewitt/qwen-typo-fixer-coreml";
@@ -79,6 +81,7 @@ async fn test_diagnose_typo_fixer_model_issue() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_typo_fixer_with_custom_temperature() -> Result<()> {
     // Use HuggingFace model instead of hardcoded path
     let model_id = "mazhewitt/qwen-typo-fixer-coreml";

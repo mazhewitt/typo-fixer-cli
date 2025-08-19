@@ -3098,6 +3098,7 @@ dependencies = [
  "candle-core",
  "candle-coreml",
  "clap",
+ "regex",
  "serde",
  "serde_json",
  "tempfile",
