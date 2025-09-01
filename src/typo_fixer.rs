@@ -94,6 +94,7 @@ impl TypoFixer {
             
             if verbose {
                 println!("📁 Loading model from local path: {}", model_path);
+                println!("⚠️ Note: Consider using UnifiedModelLoader for better compatibility and automatic config generation");
             }
 
             let path = Path::new(model_path);
@@ -106,8 +107,15 @@ impl TypoFixer {
                 Some(cfg) => cfg,
                 None => {
                     // 1. Look for explicit candle ModelConfig in model directory
-                    if let Some(cfg) = Self::try_load_model_dir_config(path, verbose) { cfg } else if let Some(cfg) = Self::try_discover_cli_config(path, verbose) { cfg } else {
-                        if verbose { println!("⚠️ No explicit config found. Falling back to default QwenConfig (may lack component file paths)"); }
+                    if let Some(cfg) = Self::try_load_model_dir_config(path, verbose) { 
+                        cfg 
+                    } else if let Some(cfg) = Self::try_discover_cli_config(path, verbose) { 
+                        cfg 
+                    } else {
+                        if verbose { 
+                            println!("⚠️ No explicit config found. Falling back to default QwenConfig");
+                            println!("💡 For better compatibility, consider using UnifiedModelLoader or providing explicit config");
+                        }
                         QwenConfig::default()
                     }
                 }
