@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 # CoreML inference via candle-coreml (local development version)
-candle-coreml = { path = "/Users/mazdahewitt/projects/candle-coreml" }
+candle-coreml = { path = ".." }
 candle-core = "0.9.1"
 
 # CLI and error handling

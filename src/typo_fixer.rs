@@ -286,12 +286,11 @@ impl TypoFixer {
         if self.verbose {
             println!("🎯 Using deterministic (greedy) generation");
         }
-
-        // Use candle-coreml's generate_text method with temperature 0.0
-        let generated_text = self.model.generate_text(prompt, max_tokens, 0.0)
+        // Use prefix-aware decoding to avoid BPE seam artifacts
+        let text = self
+            .generate_prefix_aware(prompt, max_tokens, 0.0, None)
             .context("Failed to generate tokens deterministically")?;
-
-        Ok(generated_text)
+        Ok(text)
     }
 
     /// Generate text using temperature sampling
@@ -305,11 +304,77 @@ impl TypoFixer {
             println!("🎲 Using temperature sampling (temperature: {})", temperature);
         }
 
-        // Use candle-coreml's generate_text method with specified temperature
-        let generated_text = self.model.generate_text(prompt, max_tokens, temperature)
+        // Use prefix-aware decoding with moderate top-k to reduce repetition
+        let text = self
+            .generate_prefix_aware(prompt, max_tokens, temperature, Some(40))
             .context("Failed to generate tokens with temperature")?;
+        Ok(text)
+    }
 
-        Ok(generated_text)
+    /// Generate text and decode using the full prompt+continuation, then strip the prompt prefix.
+    /// This eliminates leading artifacts (like stray quotes or "'s") from BPE joins.
+    fn generate_prefix_aware(
+        &mut self,
+        prompt: &str,
+        max_tokens: usize,
+        temperature: f32,
+        top_k: Option<usize>,
+    ) -> Result<String> {
+        // Normalize prompt: ensure a trailing space after "Output:" or at the end to avoid token merges
+        let normalized_prompt = {
+            let trimmed = prompt.trim_end();
+            if trimmed.ends_with("Output:") {
+                format!("{trimmed} ")
+            } else if !trimmed.ends_with(':')
+                && !trimmed.ends_with('.')
+                && !trimmed.ends_with('!')
+                && !trimmed.ends_with('?')
+                && !trimmed.ends_with(' ')
+            {
+                format!("{trimmed} ")
+            } else {
+                prompt.to_string()
+            }
+        };
+
+        // Generate tokens with chosen strategy
+        let tokens = self
+            .model
+            .generate_tokens_topk_temp(
+                normalized_prompt.as_str(),
+                max_tokens,
+                temperature,
+                top_k,
+            )
+            .context("Token generation failed")?;
+
+        // Decode full (prompt + tokens), then take just the suffix after the decoded prompt
+        let prompt_enc = self
+            .model
+            .tokenizer()
+            .encode(normalized_prompt.as_str(), true)
+            .map_err(|e| anyhow::anyhow!("Prompt tokenization failed: {}", e))?;
+        let mut all_ids: Vec<u32> = prompt_enc.get_ids().to_vec();
+        all_ids.extend(tokens.iter().map(|&t| t as u32));
+        let full_text = self
+            .model
+            .tokenizer()
+            .decode(&all_ids, false)
+            .map_err(|e| anyhow::anyhow!("Full decode failed: {}", e))?;
+        let prompt_text = self
+            .model
+            .tokenizer()
+            .decode(prompt_enc.get_ids(), false)
+            .unwrap_or_else(|_| normalized_prompt.clone());
+        let mut response = full_text
+            .strip_prefix(&prompt_text)
+            .unwrap_or(&full_text)
+            .to_string();
+        // Trim leading whitespace/newlines introduced by decoding boundaries
+        while response.starts_with([' ', '\n', '\t']) {
+            response.remove(0);
+        }
+        Ok(response)
     }
 
     /// Extract the corrected text from the model's output
