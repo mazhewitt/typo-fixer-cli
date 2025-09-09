@@ -137,7 +137,8 @@ async fn test_modified_config_generation(model_path: &std::path::Path) -> Result
     
     // Try with a completely custom config
     println!("    Trying custom config approach...");
-    let custom_config = QwenConfig::with_custom_naming("qwen-typo-fixer_", ".mlpackage");
+    let naming = candle_coreml::ModelNamingConfig::custom("qwen-typo-fixer", "mlpackage");
+    let custom_config = QwenConfig::default().with_naming(naming);
     
     match QwenModel::load_from_directory(model_path, Some(custom_config)) {
         Ok(mut model) => {

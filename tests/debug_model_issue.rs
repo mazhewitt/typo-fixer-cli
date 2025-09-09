@@ -63,7 +63,8 @@ async fn test_debug_typo_fixer_model_loading() -> Result<()> {
     
     // Try with custom config that matches the exact file names
     println!("   Testing with custom config for exact file names...");
-    let config3 = QwenConfig::with_custom_naming("qwen-typo-fixer_", ".mlpackage");
+    let naming = candle_coreml::ModelNamingConfig::custom("qwen-typo-fixer", "mlpackage");
+    let config3 = QwenConfig::default().with_naming(naming);
     match QwenModel::load_from_directory(&model_path, Some(config3)) {
         Ok(_) => println!("   ✅ SUCCESS with custom config!"),
         Err(e) => {
